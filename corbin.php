@@ -1,18 +1,16 @@
 <?php
-/* Corbin - responsive gallery creator
+/* Corbin - static responsive gallery creator
  *
  * Nov 2021 © Jan van den Berg
  * j11g.com
  *
- */
-
-/* Instructions
+ * Instructions
  * Set the correct input_dir (e.g. images/)
- * Run this file with the correct permission:
+ * Run this file from the cmdline with the correct permissions:
  *
  * php corbin.php
  * 
- * This will generate a thumb folder and ultimately a index.html.
+ * This will generate a thumbs folder and ultimately an index.html.
  * Move the index.html, thumbs and images folder anywhere and it'll work.
  *
  */
@@ -24,8 +22,8 @@ $thumb_dir = 'thumbs/';
 
 //Variables that don't need editting
 $image_size = 94;
-$video_extensions = Array('mp4','avi','MP4');
-$video_convert_extensions = Array('3gp','3GP','mov','MOV');
+$mp4_extensions = Array('mp4','MP4');
+$video_convert_extensions = Array('3gp','3GP','mov','MOV','avi','AVI');
 $image_extensions = Array('jpg','png','jpeg','JPG');
 
 
@@ -35,11 +33,9 @@ $image_extensions = Array('jpg','png','jpeg','JPG');
 // Only process images and videos
 // But first convert strange video formats to mp4
 
-
 //Check for video files that need to be converted first
 if ($handle = opendir($input_dir)) {
     while (false !== ($entry = readdir($handle))) {
-        if ($entry != "." && $entry != "..") {
             $file_parts = pathinfo($entry);
             $file_parts['extension'];
 
@@ -47,7 +43,6 @@ if ($handle = opendir($input_dir)) {
                 echo "Converting video $entry to mp4 format\n"; 
                 convert_vid($entry); 
             }
-        }
     }
     closedir($handle);
 }
@@ -56,12 +51,11 @@ if ($handle = opendir($input_dir)) {
 // Look for images and video with the correct format
 if ($handle = opendir($input_dir)) {
     while (false !== ($entry = readdir($handle))) {
-        if ($entry != "." && $entry != "..") {
             $file_parts = pathinfo($entry);
             $file_parts['extension'];
 
             //Check for video files
-            if (in_array($file_parts['extension'], $video_extensions)){
+            if (in_array($file_parts['extension'], $mp4_extensions)){
                 process_vid($entry); 
                 echo "Processing video $entry\n"; 
             }
@@ -70,7 +64,6 @@ if ($handle = opendir($input_dir)) {
                 generate_thumb($entry, $input_dir);
                 echo "Processing image $entry\n";
             }
-        }
     }
     closedir($handle);
 }
@@ -78,32 +71,30 @@ if ($handle = opendir($input_dir)) {
 // Last step generate index.html file 
 generate_index();
 
-
 // Functions follow here
 
 function convert_vid($entry){
     global $input_dir;
-    $video = $entry; 
-    $convert = system("ffmpeg -loglevel quiet -i $input_dir$video -qscale 0 -y $input_dir$video.mp4");
+
+    // Remove '-loglevel quiet' if you want to see what ffmpeg does
+    $convert = system("ffmpeg -loglevel quiet -i $input_dir$entry -qscale 0 -y $input_dir$entry.mp4");
 }
 
+// Process videos
 // First extract image still from video with ffmpeg
-// Second add a play button to the still
 function process_vid($entry){
     global $input_dir;
     global $thumb_dir;
     global $image_size;                                                                                                                                                                                                 
     
     // Extract still and put in the thumbs dir to make sure the still doesn't get processed twice
-    $video = $entry;
-    $extract_frame = system("ffmpeg -loglevel quiet -ss 00:00:00 -i $input_dir$video -frames:v 1 -y $thumb_dir$video.jpg", $retval);
-    $image_name = $video.".jpg";
+    $extract_frame = system("ffmpeg -loglevel quiet -ss 00:00:00 -i $input_dir$entry -frames:v 1 -y $thumb_dir$entry.jpg", $retval);
+    $image_name = $entry.".jpg";
 
     // Generate thumb 
     generate_thumb($image_name,$thumb_dir);
     echo "The generated name for the video still is $image_name\n";
     list($width, $height) = getimagesize($thumb_dir."tn_".$image_name);                                                                                                                                            
-
 }
 
 // Generate thumbnails and put them in the $thumbs_dir folder
@@ -146,6 +137,7 @@ function generate_thumb($entry, $work_dir) {
     // Create thumb
         $tn = imagecreatetruecolor($modwidth, $modheight);
 
+        // Make sure we work with JPEG
         $file_parts = pathinfo($entry);
         switch($file_parts['extension'])
         {
@@ -191,11 +183,12 @@ function correctImageOrientation($filename) {
   }       
 }
 
-
 function generate_index(){
     global $input_dir;
     global $thumb_dir;
     global $album_name;
+    global $mp4_extensions;
+    $correct_extensions = Array('jpg','png','jpeg','JPG','mp4','MP4');
 
     $index_file = fopen("index.html", "w") or die("Unable to open file!");
     echo "Writing index.html file\n";
@@ -277,15 +270,12 @@ function generate_index(){
        <body>'; 
     fwrite($index_file, $head);
 
-    // Only process the correct extensions from your image folder
-    $correct_extensions = Array('jpg','png','jpeg','JPG','mp4','MP4');
-    $mp4_extensions = Array('mp4','MP4');
-
     if ($handle = opendir($input_dir)) {
     while (false !== ($entry = readdir($handle))) {
             $file_parts = pathinfo($entry);
             $file_parts['extension'];
 
+   // Only process the correct extensions from your image folder
             if (in_array($file_parts['extension'], $correct_extensions)){
                 $link = '<div class="Photo" align="center"><div class="imgBorder" align="center"><a data-fancybox=gallery href="';
                 $link .= "$input_dir$entry";
@@ -300,7 +290,7 @@ function generate_index(){
                 }
 
                 // Put the image name in a href, by default this is hidden with CSS
-                // Change overflow option to make the image name visible
+                // Change CSS overflow option to make the image name visible
                 $link .= "</a></div><a href=" . '"'. $input_dir.$entry .'" class="Photo">'. $entry. '</a></div>';
 
                 $newline = PHP_EOL . $link;
