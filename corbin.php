@@ -40,7 +40,6 @@ if ($handle = opendir($input_dir)) {
             $file_parts['extension'];
 
             if (in_array($file_parts['extension'], $video_convert_extensions)){
-                echo "Converting video $entry to mp4 format\n"; 
                 convert_vid($entry); 
             }
     }
@@ -61,8 +60,8 @@ if ($handle = opendir($input_dir)) {
             }
             //Check for image files
             if (in_array($file_parts['extension'], $image_extensions)){                                                                                                                                            
-                generate_thumb($entry, $input_dir);
                 echo "Processing image $entry\n";
+                generate_thumb($entry, $input_dir);
             }
     }
     closedir($handle);
@@ -75,9 +74,15 @@ generate_index();
 
 function convert_vid($entry){
     global $input_dir;
-
-    // Remove '-loglevel quiet' if you want to see what ffmpeg does
-    $convert = system("ffmpeg -loglevel quiet -i $input_dir$entry -qscale 0 -y $input_dir$entry.mp4");
+    
+    //First check if the video already exists
+    if (file_exists("$input_dir$entry.mp4")) {
+        echo "The file $entry.mp4 already exists\n";
+    } else {
+        // Remove '-loglevel quiet' if you want to see what ffmpeg does
+        echo "Converting video $entry to mp4 format\n"; 
+        $convert = system("ffmpeg -loglevel quiet -i $input_dir$entry -qscale 0 -y $input_dir$entry.mp4");
+    }
 }
 
 // Process videos
@@ -131,10 +136,10 @@ function generate_thumb($entry, $work_dir) {
                 $modheight = $image_size;
         } else {
             echo "Error: something went wrong with $image_output\n";
-            exit();
         }
 
     // Create thumb
+    if ($width > 0 && $height > 0) {
         $tn = imagecreatetruecolor($modwidth, $modheight);
 
         // Make sure we work with JPEG
@@ -146,11 +151,16 @@ function generate_thumb($entry, $work_dir) {
             break;
 
             default:
-            $source = imagecreatefromjpeg($work_dir.$image_output);                                                                                                                                               
+            $source = imagecreatefromjpeg($work_dir.$image_output); 
         }
 
-        imagecopyresampled($tn, $source, 0, 0, 0, 0, $modwidth, $modheight, $width, $height);
-        imagejpeg($tn, $thumb_dir."/tn_".$image_output, 90);
+        if ($source !== false) {
+           imagecopyresampled($tn, $source, 0, 0, 0, 0, $modwidth, $modheight, $width, $height);
+           imagejpeg($tn, $thumb_dir."/tn_".$image_output, 90);
+        } else {
+            echo "Error: it appears $entry is not a valid JPEG image\n";
+        }
+    }
 }
 
 // Some smartphone images have the wrong orientation, this function fixes this
