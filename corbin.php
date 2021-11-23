@@ -10,7 +10,7 @@
  * Set the correct input_dir (e.g. images/)
  * Run this file with the correct permission:
  *
- * php genstat.php
+ * php corbin.php
  * 
  * This will generate a thumb folder and ultimately a index.html.
  * Move the index.html, thumbs and images folder anywhere and it'll work.
@@ -19,7 +19,7 @@
 
 // Variables you can edit
 $album_name = "Corbin Sample Album";
-$input_dir = 'sample/'; 
+$input_dir = 'images/'; 
 $thumb_dir = 'thumbs/';
 
 //Variables that don't need editting
@@ -103,23 +103,6 @@ function process_vid($entry){
     generate_thumb($image_name,$thumb_dir);
     echo "The generated name for the video still is $image_name\n";
     list($width, $height) = getimagesize($thumb_dir."tn_".$image_name);                                                                                                                                            
-
-    // Add play button to still
-    // Center the button based on image width and height
-    $image_with_play_button = imagecreatefromjpeg($thumb_dir."tn_$image_name");
-    $red = imagecolorallocate($image_with_play_button,255,0,0);
-    $x1 = $width / 4;
-    $y1 = $height / 1.3;
-
-    $x2 = $width / 4;
-    $y2 = $height - $y1;
-
-    $x3 = $width / 1.33;
-    $y3 = $height / 2;
-
-    $poly_points = array($x1,$y1,$x2,$y2,$x3,$y3);
-    imagefilledpolygon($image_with_play_button,$poly_points,3,$red);
-    imagejpeg($image_with_play_button, $thumb_dir."/tn_$image_name",90);
 
 }
 
@@ -230,9 +213,8 @@ function generate_index(){
                         float:left;
                         width: 96px;
                         height: 96px;
-                        
                         vertical-align: top;
-
+                        position: relative;
                         overflow: hidden;
                         white-space: nowrap;
                         /*text-overflow: ellipsis;*/
@@ -264,11 +246,32 @@ function generate_index(){
                         font-size:40px;
                         text-decoration: none;
                    }
+
+                .video-overlay-play-button {
+                    box-sizing: border-box;
+                    width: 100%;
+                    height: 100%;
+                    padding: 10px calc(50% - 50px);
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    display: block;
+                    opacity: 0.95;
+                    cursor: pointer;
+                    background-image: linear-gradient(transparent, #000);
+                    transition: opacity 150ms;
+                }
+
+                .video-overlay-play-button:hover {
+                    opacity: 1;
+                }
+
+                .video-overlay-play-button.is-hidden {
+                    display: none;
+                }
+
                 </style>
-                <link
-                  rel="stylesheet"
-                  href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@4.0/dist/fancybox.css"
-                  />
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@4.0/dist/fancybox.css" />
        </head>
        <h1>'. $album_name.' </h1>
        <body>'; 
@@ -276,16 +279,26 @@ function generate_index(){
 
     // Only process the correct extensions from your image folder
     $correct_extensions = Array('jpg','png','jpeg','JPG','mp4','MP4');
+    $mp4_extensions = Array('mp4','MP4');
+
     if ($handle = opendir($input_dir)) {
     while (false !== ($entry = readdir($handle))) {
             $file_parts = pathinfo($entry);
             $file_parts['extension'];
 
             if (in_array($file_parts['extension'], $correct_extensions)){
-
                 $link = '<div class="Photo" align="center"><div class="imgBorder" align="center"><a data-fancybox=gallery href="';
                 $link .= "$input_dir$entry";
                 $link .= '"><img src=' . '"' . $thumb_dir . 'tn_' . $entry .' "/>';
+
+                //Add play button for mp4 videos
+                if (in_array($file_parts['extension'], $mp4_extensions)){
+                    $link .= '<svg class="video-overlay-play-button" viewBox="0 0 200 200" alt="Play video">
+                                <circle cx="100" cy="100" r="90" fill="none" stroke-width="15" stroke="#fff"/>
+                                <polygon points="70, 55 70, 145 145, 100" fill="#fff"/>
+                            </svg>';
+                }
+
                 // Put the image name in a href, by default this is hidden with CSS
                 // Change overflow option to make the image name visible
                 $link .= "</a></div><a href=" . '"'. $input_dir.$entry .'" class="Photo">'. $entry. '</a></div>';
